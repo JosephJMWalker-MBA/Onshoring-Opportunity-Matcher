@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onshoring Opportunity Matcher</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold text-center mb-6">Onshoring Opportunity Matcher</h1>
+        <div class="bg-white p-6 rounded-lg shadow-md max-w-md mx-auto">
+            <div class="mb-4">
+                <label class="block text-gray-700">Location (State)</label>
+                <input id="location" type="text" class="w-full p-2 border rounded" placeholder="e.g., Texas">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700">Skills/Experience</label>
+                <input id="skills" type="text" class="w-full p-2 border rounded" placeholder="e.g., Manufacturing, Engineering, Drone">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700">Interests (Sector)</label>
+                <input list="sectors" id="sector" class="w-full p-2 border rounded" placeholder="e.g., Drones, Semiconductors">
+                <datalist id="sectors">
+                    <option value="Semiconductors">
+                    <option value="Clean Energy">
+                    <option value="Medical Supplies">
+                    <option value="Critical Minerals">
+                    <option value="EV Batteries">
+                    <option value="Industrial Machinery">
+                    <option value="Pharmaceuticals">
+                    <option value="Textiles">
+                    <option value="Furniture">
+                    <option value="Drones">
+                </datalist>
+            </div>
+            <button onclick="findOpportunities()" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Find Opportunities</button>
+        </div>
+        <div id="results" class="mt-6 max-w-2xl mx-auto"></div>
+    </div>
+    <script>
+        function findOpportunities() {
+            const location = document.getElementById('location').value.toLowerCase();
+            const skills = document.getElementById('skills').value.toLowerCase();
+            const sector = document.getElementById('sector').value;
+
+            // Store user-entered sector in LocalStorage for future analysis
+            if (sector) {
+                let userSectors = JSON.parse(localStorage.getItem('userSectors') || '[]');
+                if (!userSectors.includes(sector)) {
+                    userSectors.push(sector);
+                    localStorage.setItem('userSectors', JSON.stringify(userSectors));
+                }
+            }
+
+            // Opportunity data based on document
+            const opportunities = [
+                {
+                    sector: 'Semiconductors',
+                    opportunity: 'Chip Packaging Facility',
+                    market: '$X billion',
+                    region: 'Arizona, Texas, New York',
+                    support: 'CHIPS Act, NIST MEP',
+                    stage: 'Startup/Growth',
+                    match: location.includes('arizona') || location.includes('texas') || location.includes('new york') ? 0.9 : 0.5
+                },
+                {
+                    sector: 'Clean Energy',
+                    opportunity: 'Battery Recycling',
+                    market: '100 GWh spent batteries',
+                    region: 'Nevada, Georgia, South Carolina',
+                    support: 'DOE Recycling Prize, SBA grants',
+                    stage: 'Startup',
+                    match: location.includes('nevada') || location.includes('georgia') || location.includes('south carolina') ? 0.8 : 0.4
+                },
+                {
+                    sector: 'Medical Supplies',
+                    opportunity: 'PPE Manufacturing',
+                    market: '$30 billion',
+                    region: 'North Carolina, Wisconsin',
+                    support: 'CDC/ASPR grants, SBA SBDC',
+                    stage: 'Startup',
+                    match: location.includes('north carolina') || location.includes('wisconsin') ? 0.7 : 0.3
+                },
+                {
+                    sector: 'Critical Minerals',
+                    opportunity: 'Rare Earth Processing',
+                    market: '$5 billion',
+                    region: 'Nevada, Arizona, Kentucky',
+                    support: 'DOE Critical Minerals Program, DOD Title III',
+                    stage: 'Growth',
+                    match: location.includes('nevada') || location.includes('arizona') || location.includes('kentucky') ? 0.8 : 0.4
+                },
+                {
+                    sector: 'EV Batteries',
+                    opportunity: 'Battery Cell Assembly',
+                    market: '$50 billion',
+                    region: 'Michigan, Georgia, Ohio',
+                    support: 'DOE Loan Program, IRA Incentives',
+                    stage: 'Expansion',
+                    match: location.includes('michigan') || location.includes('georgia') || location.includes('ohio') ? 0.8 : 0.4
+                },
+                {
+                    sector: 'Industrial Machinery',
+                    opportunity: 'CNC Equipment Manufacturing',
+                    market: '$12 billion',
+                    region: 'Indiana, Pennsylvania',
+                    support: 'NIST MEP, Manufacturing USA',
+                    stage: 'Startup',
+                    match: location.includes('indiana') || location.includes('pennsylvania') ? 0.7 : 0.3
+                },
+                {
+                    sector: 'Pharmaceuticals',
+                    opportunity: 'Active Ingredient Production',
+                    market: '$70 billion',
+                    region: 'New Jersey, North Carolina',
+                    support: 'FDA Fast Track, NIH Support',
+                    stage: 'Scale-Up',
+                    match: location.includes('new jersey') || location.includes('north carolina') ? 0.8 : 0.4
+                },
+                {
+                    sector: 'Textiles',
+                    opportunity: 'Technical Textile Production',
+                    market: '$10 billion',
+                    region: 'South Carolina, Georgia',
+                    support: 'SBA STEP Grants, NIST MEP',
+                    stage: 'Startup',
+                    match: location.includes('south carolina') || location.includes('georgia') ? 0.6 : 0.2
+                },
+                {
+                    sector: 'Furniture',
+                    opportunity: 'Office Furniture Manufacturing',
+                    market: '$13 billion',
+                    region: 'North Carolina, Michigan',
+                    support: 'SBA 7(a) Loans, State Incentives',
+                    stage: 'Startup',
+                    match: location.includes('north carolina') || location.includes('michigan') ? 0.6 : 0.2
+                },
+                {
+                    sector: 'Drones',
+                    opportunity: 'Unmanned Aerial Systems Manufacturing',
+                    market: '$5 billion',
+                    region: 'Utah, Georgia, California',
+                    support: 'DOD SBIR/STTR, FAA Test Grants',
+                    stage: 'Startup',
+                    match: location.includes('utah') || location.includes('georgia') || location.includes('california') ? 0.7 : 0.3
+                }
+            ];
+
+            // Filter and sort opportunities by match score
+            const matches = opportunities
+                .filter(op => op.sector.toLowerCase() === sector.toLowerCase() &&
+                    (skills.includes('manufacturing') || skills.includes('engineering') || skills.includes('drone') || skills.includes('production')))
+                .sort((a, b) => b.match - a.match);
+
+            // Display results
+            const resultsDiv = document.getElementById('results');
+            if (matches.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="bg-yellow-100 p-4 rounded shadow">
+                        <h3 class="text-xl font-bold">Custom Sector: ${sector}</h3>
+                        <p>This is a developing area. For ${sector.toLowerCase()} or other emerging industries, consider:</p>
+                        <ul class="list-disc list-inside">
+                            <li><a href="https://www.faa.gov/uas/programs_partnerships" target="_blank" class="text-blue-600 underline">FAA UAS Programs</a></li>
+                            <li><a href="https://beta.sam.gov/" target="_blank" class="text-blue-600 underline">SAM.gov federal bids</a></li>
+                            <li><a href="https://www.sbir.gov" target="_blank" class="text-blue-600 underline">SBIR Drone Grants</a></li>
+                        </ul>
+                        <p>Have feedback or suggestions? <a href="https://forms.gle/example" class="underline text-blue-600">Share here</a>.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            resultsDiv.innerHTML = '<h2 class="text-2xl font-semibold mb-4">Recommended Opportunities</h2>';
+            matches.forEach(op => {
+                resultsDiv.innerHTML += `
+                    <div class="bg-white p-4 mb-4 rounded-lg shadow">
+                        <h3 class="text-xl font-bold">${op.opportunity}</h3>
+                        <p><strong>Sector:</strong> ${op.sector}</p>
+                        <p><strong>Market Size:</strong> ${op.market}</p>
+                        <p><strong>Regions:</strong> ${op.region}</p>
+                        <p><strong>Support:</strong> ${op.support}</p>
+                        <p><strong>Stage:</strong> ${op.stage}</p>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
