@@ -1,0 +1,1485 @@
+{
+  "name": "Onshoring Opportunity Match - Data Pipeline for USA Suppliers",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "45797e18-c236-4ef3-8bfe-e98de6273175",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.thomasnet.com/suppliers/sitemap/index.xml",
+        "responseFormat": "string",
+        "options": {
+          "headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Accept-Encoding": "gzip"
+          }
+        }
+      },
+      "id": "2c63b6ea-88b7-4a36-9251-42fa81d9cf9b",
+      "name": "TN Fetch Supplier Sub-Index",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        60,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node['TN Fetch Supplier Sub-Index'].httpCode === 200}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "new-tn-check-sub-index-response",
+      "name": "TN Check Sub-Index Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toJson"
+      },
+      "id": "fd764537-54c1-4e22-8ea2-7fc8f82ea63e",
+      "name": "TN Parse Sub-Index XML",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        260,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if (!items[0].json.sitemapindex || !items[0].json.sitemapindex.sitemap) {\n  console.log('Not a sitemapindex or missing sitemap:', items[0].json);\n  return [];\n}\nreturn items[0].json.sitemapindex.sitemap.map(s => ({ json: { childSitemapUrl: s.loc[0] } }));"
+      },
+      "id": "fdb0c010-93e8-466e-bbfb-e517381fdbc4",
+      "name": "TN Extract Child Sitemap URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "97fe4e65-a171-4954-a96f-bb072d1872c6",
+      "name": "TN Split Child Sitemap URLs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.childSitemapUrl}}",
+        "responseFormat": "string",
+        "options": {
+          "headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Accept-Encoding": "gzip"
+          }
+        }
+      },
+      "id": "new-tn-fetch-child-sitemap",
+      "name": "TN Fetch Child Sitemap",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        760,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node['TN Fetch Child Sitemap'].httpCode === 200}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "new-tn-check-child-sitemap-response",
+      "name": "TN Check Child Sitemap Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        860,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toJson"
+      },
+      "id": "new-tn-parse-child-sitemap",
+      "name": "TN Parse Child Sitemap",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if (!items[0].json.urlset || !items[0].json.urlset.url) {\n  console.log('No URLs found in child sitemap:', items[0].json);\n  return [];\n}\nreturn items[0].json.urlset.url.map(u => ({ json: { url: u.loc[0] } }));"
+      },
+      "id": "new-tn-extract-supplier-urls",
+      "name": "TN Extract Supplier URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "new-tn-split-supplier-urls",
+      "name": "TN Split Supplier URLs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        1260,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "timeUnit": "seconds",
+        "value": 2
+      },
+      "id": "new-tn-rate-limit-wait",
+      "name": "TN Rate Limit Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1460,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.url}}",
+        "options": {}
+      },
+      "id": "bfa17b4c-512c-4c38-bb5a-99840ed539a9",
+      "name": "TN Fetch Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1660,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "string",
+        "stringProperty": "body",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "company",
+              "cssSelector": "h1, .company-name",
+              "returnArray": true
+            },
+            {
+              "key": "description",
+              "cssSelector": "p, .overview, .description",
+              "returnArray": true
+            },
+            {
+              "key": "website",
+              "cssSelector": "a[href*='http']:not([href*='thomasnet.com'])",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "57a7766c-b2ed-4c94-8d88-91135ab42187",
+      "name": "TN Extract Details",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1,
+      "position": [
+        1860,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "values": {
+          "string": [
+            { "name": "company", "value": "={{$json.company[0] || ''}}" },
+            { "name": "description", "value": "={{$json.description[0] || ''}}" },
+            { "name": "website", "value": "={{$json.website[0] || ''}}" },
+            { "name": "source", "value": "ThomasNet" }
+          ]
+        },
+        "options": { "keepOnlySet": true }
+      },
+      "id": "055744e4-5818-4641-8e9d-50ce1db1729a",
+      "name": "TN Shape & Tag",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        2060,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "values": {
+          "json": [
+            {
+              "value": {
+                "sitemapNumbers": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "new-in-generate-sitemap-numbers",
+      "name": "IN Generate Sitemap Numbers",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        160,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "fieldToSplitOut": "sitemapNumbers",
+        "options": {}
+      },
+      "id": "new-in-split-sitemap-numbers",
+      "name": "IN Split Sitemap Numbers",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        260,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.industrynet.com/sitemap{{$json.sitemapNumbers}}.xml",
+        "responseFormat": "string",
+        "options": {
+          "ignoreHTTPStatusErrors": true
+        }
+      },
+      "id": "bc04b5b5-6712-40f8-8d00-311f8929362a",
+      "name": "IN Fetch Sitemap",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        360,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node['IN Fetch Sitemap'].httpCode === 200}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "new-in-check-sitemap-response",
+      "name": "IN Check Sitemap Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        460,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toJson"
+      },
+      "id": "a161ca91-54c2-46ff-92f5-d9980e62b6cb",
+      "name": "IN Parse Sitemap XML",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        560,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if (!items[0].json.sitemapindex || !items[0].json.sitemapindex.sitemap) {\n  console.log('Not a sitemapindex or missing sitemap:', items[0].json);\n  return [];\n}\nreturn items[0].json.sitemapindex.sitemap.map(s => ({ json: { sitemapUrl: s.loc[0] } }));"
+      },
+      "id": "new-in-extract-sitemap-urls",
+      "name": "IN Extract Sitemap URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "new-in-split-sitemap-urls",
+      "name": "IN Split Sitemap URLs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        760,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.sitemapUrl}}",
+        "responseFormat": "string"
+      },
+      "id": "new-in-fetch-sub-sitemap",
+      "name": "IN Fetch Sub-Sitemap",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        860,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toJson"
+      },
+      "id": "new-in-parse-sub-sitemap",
+      "name": "IN Parse Sub-Sitemap",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        960,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if (!items[0] || !items[0].json || !items[0].json.urlset || !items[0].json.urlset.url) {\n  console.log(\"Unexpected sub-sitemap structure:\", items[0] ? items[0].json : \"No JSON data\");\n  return [];\n}\nconst urls = items[0].json.urlset.url.map(u => u.loc[0]);\nreturn urls.filter(u => u.includes('/company/')).map(u => ({ json: { url: u } }));"
+      },
+      "id": "ed88236f-cdf9-4b87-9a5c-755e8546dce8",
+      "name": "IN Filter /company/",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "a968e20b-e7ad-4882-a0d0-81e4d6232336",
+      "name": "IN Split",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        1260,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "timeUnit": "seconds",
+        "value": 2
+      },
+      "id": "new-in-rate-limit-wait",
+      "name": "IN Rate Limit Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1460,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.url}}",
+        "options": {}
+      },
+      "id": "f6689535-94e5-44fb-84a9-7f796f537c39",
+      "name": "IN Fetch Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1660,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "string",
+        "stringProperty": "body",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "company",
+              "cssSelector": "h1, .company-name",
+              "returnArray": true
+            },
+            {
+              "key": "description",
+              "cssSelector": "p, .description, .overview",
+              "returnArray": true
+            },
+            {
+              "key": "website",
+              "cssSelector": "a[href*='http']:not([href*='industrynet.com'])",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b8a157e6-984b-4b09-9c7a-b77e6e4a0105",
+      "name": "IN Extract Details",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1,
+      "position": [
+        1860,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "values": {
+          "string": [
+            { "name": "company", "value": "={{$json.company[0] || ''}}" },
+            { "name": "description", "value": "={{$json.description[0] || ''}}" },
+            { "name": "website", "value": "={{$json.website[0] || ''}}" },
+            { "name": "source", "value": "IndustryNet" }
+          ]
+        },
+        "options": { "keepOnlySet": true }
+      },
+      "id": "479669bf-6077-475c-9b28-1ead726da967",
+      "name": "IN Shape & Tag",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        2060,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.sba.gov/sitemap.xml",
+        "responseFormat": "string"
+      },
+      "id": "b4d4d68f-cef8-4359-ad65-c8628fb6b2e4",
+      "name": "SBA Fetch Sitemap",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        60,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node['SBA Fetch Sitemap'].httpCode === 200}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "new-sba-check-sitemap-response",
+      "name": "SBA Check Sitemap Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        160,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toJson"
+      },
+      "id": "7c44a4b0-92b7-43b0-8c06-567373ba255c",
+      "name": "SBA Parse Sitemap",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        260,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if (!items[0].json.urlset || !items[0].json.urlset.url) {\n  console.log('No URLs found in sitemap:', items[0].json);\n  return [];\n}\nreturn items[0].json.urlset.url\n  .filter(u => u.loc[0].includes('/american-manufacturers/'))\n  .map(u => ({ json: { url: u.loc[0], source: 'SBA Portal' } }));"
+      },
+      "id": "c666e769-737c-4dd2-be3c-773462420dba",
+      "name": "SBA Extract URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "3fe8e5ce-b83b-4898-8c88-3dd5fac311e2",
+      "name": "SBA Split URLs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        660,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.url}}",
+        "responseFormat": "string"
+      },
+      "id": "new-sba-fetch-page",
+      "name": "SBA Fetch Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        760,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "string",
+        "stringProperty": "body",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "company",
+              "cssSelector": "h1, .company-name",
+              "returnArray": true
+            },
+            {
+              "key": "description",
+              "cssSelector": "p, .overview, .description",
+              "returnArray": true
+            },
+            {
+              "key": "website",
+              "cssSelector": "a[href*='http']:not([href*='sba.gov'])",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            }
+          ]
+        }
+      },
+      "id": "new-sba-extract-details",
+      "name": "SBA Extract Details",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1,
+      "position": [
+        860,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "values": {
+          "string": [
+            { "name": "company", "value": "={{$json.company[0] || ''}}" },
+            { "name": "description", "value": "={{$json.description[0] || ''}}" },
+            { "name": "website", "value": "={{$json.website[0] || ''}}" },
+            { "name": "source", "value": "={{$json.source}}" }
+          ]
+        },
+        "options": { "keepOnlySet": true }
+      },
+      "id": "new-sba-shape-tag",
+      "name": "SBA Shape & Tag",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        1060,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://i5services-20596380.hs-sites.com/sitemap.xml",
+        "responseFormat": "string",
+        "options": {
+          "headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+          }
+        }
+      },
+      "id": "344fb9a2-501c-4515-b3d4-ba8303156cc6",
+      "name": "i5 Fetch Sitemap",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        60,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node['i5 Fetch Sitemap'].httpCode === 200}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "new-i5-check-sitemap-response",
+      "name": "i5 Check Sitemap Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        160,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toJson"
+      },
+      "id": "new-i5-parse-sitemap",
+      "name": "i5 Parse Sitemap",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        260,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if (!items[0].json.urlset || !items[0].json.urlset.url) {\n  console.log('No URLs found in sitemap:', items[0].json);\n  return [];\n}\nreturn items[0].json.urlset.url.map(u => ({ json: { url: u.loc[0] } }));"
+      },
+      "id": "dba91c01-4b6e-467b-9baf-ed1dd00dd192",
+      "name": "i5 Extract URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "new-i5-split-urls",
+      "name": "i5 Split URLs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        660,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.url}}",
+        "responseFormat": "string",
+        "options": {
+          "headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+          }
+        }
+      },
+      "id": "new-i5-fetch-page",
+      "name": "i5 Fetch Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        760,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "string",
+        "stringProperty": "body",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "company",
+              "cssSelector": "h2, h3",
+              "returnArray": true
+            },
+            {
+              "key": "description",
+              "cssSelector": "p.description, .overview",
+              "returnArray": true
+            },
+            {
+              "key": "website",
+              "cssSelector": "a[href*='http']:not([href*='hs-sites.com'])",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            }
+          ]
+        }
+      },
+      "id": "new-i5-extract-details",
+      "name": "i5 Extract Details",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1,
+      "position": [
+        860,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "values": {
+          "string": [
+            { "name": "company", "value": "={{$json.company[0] || ''}}" },
+            { "name": "description", "value": "={{$json.description[0] || ''}}" },
+            { "name": "website", "value": "={{$json.website[0] || ''}}" },
+            { "name": "source", "value": "i5Services" }
+          ]
+        },
+        "options": { "keepOnlySet": true }
+      },
+      "id": "59fdd772-623a-4020-b9bd-05af0ff288f1",
+      "name": "i5 Shape & Tag",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        1060,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 4,
+        "mode": "append"
+      },
+      "id": "3a570d05-a6db-4365-be90-686e3aa35dba",
+      "name": "Merge All Sources",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2260,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "values": {
+          "string": [
+            { "name": "company", "value": "={{$json.company}}" },
+            { "name": "description", "value": "={{$json.description}}" },
+            { "name": "website", "value": "={{$json.website}}" },
+            { "name": "source", "value": "={{$json.source}}" }
+          ]
+        },
+        "options": { "keepOnlySet": true }
+      },
+      "id": "new-log-data-before-airtable",
+      "name": "Log Data Before Airtable",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        2360,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "timeUnit": "milliseconds",
+        "value": 250
+      },
+      "id": "new-airtable-rate-limit-wait",
+      "name": "Airtable Rate Limit Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        2410,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableTokenApi",
+        "operation": "upsert",
+        "application": {
+          "__rl": true,
+          "value": "https://airtable.com/appDfmulniRL5eHEs/shr3E6ucqqRwewhgE",
+          "mode": "url"
+        },
+        "table": "Suggestions",
+        "updateKey": "company",
+        "fields": {
+          "Company": "={{$json.company}}",
+          "Description": "={{$json.description}}",
+          "Website": "={{$json.website}}",
+          "Source": "={{$json.source}}"
+        }
+      },
+      "id": "104a098f-3b39-48af-aa69-ebd37f2cbfde",
+      "name": "Airtable Upsert",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 1,
+      "position": [
+        2460,
+        280
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "LwwMrdlnsQsI3voL",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "TN Fetch Supplier Sub-Index",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IN Generate Sitemap Numbers",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SBA Fetch Sitemap",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "i5 Fetch Sitemap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Fetch Supplier Sub-Index": {
+      "main": [
+        [
+          {
+            "node": "TN Check Sub-Index Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Check Sub-Index Response": {
+      "main": [
+        [
+          {
+            "node": "TN Parse Sub-Index XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "TN Parse Sub-Index XML": {
+      "main": [
+        [
+          {
+            "node": "TN Extract Child Sitemap URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Extract Child Sitemap URLs": {
+      "main": [
+        [
+          {
+            "node": "TN Split Child Sitemap URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Split Child Sitemap URLs": {
+      "main": [
+        [
+          {
+            "node": "TN Fetch Child Sitemap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Fetch Child Sitemap": {
+      "main": [
+        [
+          {
+            "node": "TN Check Child Sitemap Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Check Child Sitemap Response": {
+      "main": [
+        [
+          {
+            "node": "TN Parse Child Sitemap",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "TN Parse Child Sitemap": {
+      "main": [
+        [
+          {
+            "node": "TN Extract Supplier URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Extract Supplier URLs": {
+      "main": [
+        [
+          {
+            "node": "TN Split Supplier URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Split Supplier URLs": {
+      "main": [
+        [
+          {
+            "node": "TN Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Rate Limit Wait": {
+      "main": [
+        [
+          {
+            "node": "TN Fetch Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Fetch Page": {
+      "main": [
+        [
+          {
+            "node": "TN Extract Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Extract Details": {
+      "main": [
+        [
+          {
+            "node": "TN Shape & Tag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TN Shape & Tag": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Generate Sitemap Numbers": {
+      "main": [
+        [
+          {
+            "node": "IN Split Sitemap Numbers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Split Sitemap Numbers": {
+      "main": [
+        [
+          {
+            "node": "IN Fetch Sitemap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Fetch Sitemap": {
+      "main": [
+        [
+          {
+            "node": "IN Check Sitemap Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Check Sitemap Response": {
+      "main": [
+        [
+          {
+            "node": "IN Parse Sitemap XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "IN Parse Sitemap XML": {
+      "main": [
+        [
+          {
+            "node": "IN Extract Sitemap URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Extract Sitemap URLs": {
+      "main": [
+        [
+          {
+            "node": "IN Split Sitemap URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Split Sitemap URLs": {
+      "main": [
+        [
+          {
+            "node": "IN Fetch Sub-Sitemap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Fetch Sub-Sitemap": {
+      "main": [
+        [
+          {
+            "node": "IN Parse Sub-Sitemap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Parse Sub-Sitemap": {
+      "main": [
+        [
+          {
+            "node": "IN Filter /company/",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Filter /company/": {
+      "main": [
+        [
+          {
+            "node": "IN Split",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Split": {
+      "main": [
+        [
+          {
+            "node": "IN Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Rate Limit Wait": {
+      "main": [
+        [
+          {
+            "node": "IN Fetch Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Fetch Page": {
+      "main": [
+        [
+          {
+            "node": "IN Extract Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Extract Details": {
+      "main": [
+        [
+          {
+            "node": "IN Shape & Tag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IN Shape & Tag": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "SBA Fetch Sitemap": {
+      "main": [
+        [
+          {
+            "node": "SBA Check Sitemap Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SBA Check Sitemap Response": {
+      "main": [
+        [
+          {
+            "node": "SBA Parse Sitemap",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "SBA Parse Sitemap": {
+      "main": [
+        [
+          {
+            "node": "SBA Extract URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SBA Extract URLs": {
+      "main": [
+        [
+          {
+            "node": "SBA Split URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SBA Split URLs": {
+      "main": [
+        [
+          {
+            "node": "SBA Fetch Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SBA Fetch Page": {
+      "main": [
+        [
+          {
+            "node": "SBA Extract Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SBA Extract Details": {
+      "main": [
+        [
+          {
+            "node": "SBA Shape & Tag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SBA Shape & Tag": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "i5 Fetch Sitemap": {
+      "main": [
+        [
+          {
+            "node": "i5 Check Sitemap Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "i5 Check Sitemap Response": {
+      "main": [
+        [
+          {
+            "node": "i5 Parse Sitemap",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "i5 Parse Sitemap": {
+      "main": [
+        [
+          {
+            "node": "i5 Extract URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "i5 Extract URLs": {
+      "main": [
+        [
+          {
+            "node": "i5 Split URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "i5 Split URLs": {
+      "main": [
+        [
+          {
+            "node": "i5 Fetch Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "i5 Fetch Page": {
+      "main": [
+        [
+          {
+            "node": "i5 Extract Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "i5 Extract Details": {
+      "main": [
+        [
+          {
+            "node": "i5 Shape & Tag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "i5 Shape & Tag": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge All Sources": {
+      "main": [
+        [
+          {
+            "node": "Log Data Before Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Data Before Airtable": {
+      "main": [
+        [
+          {
+            "node": "Airtable Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable Rate Limit Wait": {
+      "main": [
+        [
+          {
+            "node": "Airtable Upsert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "07c09374-1038-423d-84c8-d8698f7facbd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "00bc8041889682accd65ad411cc87cc6e24f3b8a9ec988a4f4c853c270a6698a"
+  },
+  "id": "mUYbEkgei4nLKrCh",
+  "tags": []
+}
